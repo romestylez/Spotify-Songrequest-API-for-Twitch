@@ -1,4 +1,4 @@
-# Songrequest – Spotify Playlist API für Streamer.bot & Co.
+# Songrequest – Spotify Playlist API für Streamer.bot & Co
 
 Kleine PHP-API zum Hinzufügen von Spotify-Tracks in eine Playlist, inkl. OAuth-Login, automatischem Aufräumen gespielter Songs und einfacher Anbindung an **Streamer.bot** (Channel Points / Bits) über ein mitgeliefertes Node-Script.
 
