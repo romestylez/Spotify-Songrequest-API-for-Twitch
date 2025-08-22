@@ -57,17 +57,36 @@ function buildTrackUrlFromText(text) {
       const payload = JSON.parse(text);
       if (payload && payload.ok && payload.message) {
         console.log(payload.message);                 // 🎵 Hinzugefügt: Artist — Title
-        // ⬇️ NEU: auch in songresult.txt speichern
         fs.writeFileSync("songresult.txt", payload.message + "\n");
       } else if (payload && (payload.error || payload.message)) {
-        console.log("❌ Fehler: " + (payload.error || payload.message));
+        let errMsg = "";
+
+        if (typeof payload.error === "string") {
+          errMsg = payload.error;
+        } else if (typeof payload.error === "object") {
+          errMsg = JSON.stringify(payload.error);
+        } else if (payload.message) {
+          errMsg = payload.message;
+        } else {
+          errMsg = "Unbekannter Fehler";
+        }
+
+        const out = "❌ Fehler beim Hinzufügen: " + errMsg;
+        console.log(out);
+        fs.writeFileSync("songresult.txt", out + "\n");
       } else {
-        console.log("❌ Fehler: Leere Antwort");
+        const out = "❌ Fehler: Leere Antwort";
+        console.log(out);
+        fs.writeFileSync("songresult.txt", out + "\n");
       }
     } catch {
-      console.log(text && text.trim() ? text.trim() : "❌ Fehler: Leere Antwort");
+      const out = text && text.trim() ? text.trim() : "❌ Fehler: Leere Antwort";
+      console.log(out);
+      fs.writeFileSync("songresult.txt", out + "\n");
     }
   } catch (e) {
-    console.log("❌ Fehler: " + (e.message || e));
+    const out = "❌ Fehler: " + (e.message || e);
+    console.log(out);
+    fs.writeFileSync("songresult.txt", out + "\n");
   }
 })();

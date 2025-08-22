@@ -39,21 +39,33 @@ $artists = array_map(fn($a) => $a['name'] ?? '', $track['artists'] ?? []);
 $artistStr = implode(', ', array_filter($artists));
 
 // --- Track ans Ende der Playlist hängen
-spotify_api(
+$resp = spotify_api(
     'POST',
     "https://api.spotify.com/v1/playlists/{$playlistId}/tracks",
     $token,
     ['uris' => ["spotify:track:{$trackId}"]]
 );
 
-// --- Schöne Chat-Antwort zurückgeben
-$msg = ($title || $artistStr)
-    ? "🎵 Hinzugefügt: {$artistStr} — {$title}"
-    : "Track hinzugefügt";
+// --- Antwort auswerten
+if (isset($resp['error'])) {
+    $errMsg = is_array($resp['error']) ? json_encode($resp['error']) : (string)$resp['error'];
+    json_fail(500, "Spotify-Fehler: " . $errMsg);
+}
 
-json_ok([
-    'message'  => $msg,
-    'track_id' => $trackId,
-    'title'    => $title,
-    'artists'  => $artists,
-]);
+if (isset($resp['snapshot_id'])) {
+    // Erfolg
+    $msg = ($title || $artistStr)
+        ? "🎵 Hinzugefügt: {$artistStr} — {$title}"
+        : "Track hinzugefügt";
+
+    json_ok([
+        'message'     => $msg,
+        'track_id'    => $trackId,
+        'title'       => $title,
+        'artists'     => $artists,
+        'snapshot_id' => $resp['snapshot_id'],
+    ]);
+}
+
+// Fallback: Unerwartete Antwort
+json_fail(500, "Unerwartete Antwort von Spotify: " . json_encode($resp));

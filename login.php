@@ -1,9 +1,27 @@
 <?php
-require __DIR__.'/bootstrap.php';
-$clientId = envv('SPOTIFY_CLIENT_ID');
-$redirect = urlencode(envv('SPOTIFY_REDIRECT_URI'));
-$scope = urlencode('playlist-modify-private playlist-modify-public user-read-playback-state');
-$state = bin2hex(random_bytes(8));
-$authUrl = "https://accounts.spotify.com/authorize?response_type=code&client_id={$clientId}&redirect_uri={$redirect}&scope={$scope}&state={$state}";
-header('Content-Type: text/html; charset=utf-8');
-echo "<a href=\"{$authUrl}\">Bei Spotify einloggen</a>";
+require __DIR__ . '/bootstrap.php';
+
+// welche App? per Parameter steuerbar
+$app = $_GET['app'] ?? 'main';
+
+if ($app === 'autoclear') {
+    $clientId     = envv('SPOTIFY_CLIENT_ID_AUTOCLEAR');
+    $clientSecret = envv('SPOTIFY_CLIENT_SECRET_AUTOCLEAR');
+} else {
+    $clientId     = envv('SPOTIFY_CLIENT_ID_MAIN');
+    $clientSecret = envv('SPOTIFY_CLIENT_SECRET_MAIN');
+}
+
+$redirectUri = envv('SPOTIFY_REDIRECT_URI');
+
+// Start Authorize Flow
+$authUrl = "https://accounts.spotify.com/authorize?" . http_build_query([
+    'response_type' => 'code',
+    'client_id'     => $clientId,
+    'scope'         => 'playlist-modify-public playlist-modify-private user-read-playback-state',
+    'redirect_uri'  => $redirectUri,
+    'state'         => $app // merken, welche App es war
+]);
+
+header("Location: $authUrl");
+exit;
