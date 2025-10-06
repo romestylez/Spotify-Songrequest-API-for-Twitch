@@ -1,64 +1,64 @@
-# Songrequest – Spotify Playlist API für Streamer.bot & Co
+# Songrequest – Spotify Playlist API for Streamer.bot & Co
 
-Kleine PHP-API zum Hinzufügen von Spotify-Tracks in eine Playlist, inkl. OAuth-Login, automatischem Aufräumen gespielter Songs und einfacher Anbindung an **Streamer.bot** (Channel Points / Bits) über ein mitgeliefertes Node-Script.
+A small PHP API for adding Spotify tracks to a playlist – including OAuth login, automatic removal of played songs, and simple integration with **Streamer.bot** (Channel Points / Bits) via an included Node script.
 
 ## Features
 
-- 🎧 **Track hinzufügen** per Spotify‐URL oder `spotify:track:` URI  
-- 🔐 **OAuth-Flow** (Login & Refresh Token speichern)  
-- 🧹 **Auto-Clear**: Löscht bereits gespielte Playlist-Einträge (mit 20-Sekunden-Puffer & State-Tracking)  
-- 🗑️ **Playlist leeren** via Endpoint  
-- ⚙️ **.env**-Konfiguration (Client ID/Secret, Redirect URI, Playlist ID, Refresh Token)  
-- 🤝 **Streamer.bot-ready**: `fetch.js` liest `%rawInput%` / `%message%` und gibt eine Einzeilen-Antwort für `%output1%` zurück  
+- 🎧 **Add track** via Spotify URL or `spotify:track:` URI  
+- 🔐 **OAuth login** (stores login & refresh token automatically)  
+- 🧹 **Auto-clean**: Removes already played songs from the playlist (with a 20-second buffer and state tracking)  
+- 🗑️ **Clear playlist** via endpoint  
+- ⚙️ **.env configuration** (Client ID/Secret, Redirect URI, Playlist ID, Refresh Token)  
+- 🤝 **Streamer.bot compatible**: `fetch.js` reads `%rawInput%` / `%message%` and returns a single-line response for `%output1%`  
 
 ---
 
-## Schnellstart
+## Quick Start
 
-### Voraussetzungen
+### Requirements
 
-- PHP ≥ 8.1 mit cURL
-- Webserver (lokal oder öffentlich erreichbar)
-- Node.js (nur für `fetch.js`)
+- PHP ≥ 8.1 with cURL  
+- Web server (local or public)  
+- Node.js (only for `fetch.js`)  
 - Spotify Developer Account + App  
-  - Redirect URI in der App hinterlegen (muss mit `.env` übereinstimmen)
-  - Benötigte Scopes:  
+  - Add Redirect URI in the app (must match `.env`)  
+  - Required scopes:  
     `playlist-modify-private`, `playlist-modify-public`, `user-read-playback-state`
 
 ### Installation
 
 ```bash
-# Repo klonen
-git clone <DEIN-REPO>.git
+# Clone repository
+git clone <YOUR-REPO>.git
 cd Songrequest
 
-# .env erzeugen
+# Create .env file
 cp .env.example .env
-# ... und Werte einsetzen:
+# ... and fill in values:
 # SPOTIFY_CLIENT_ID=...
 # SPOTIFY_CLIENT_SECRET=...
-# SPOTIFY_REDIRECT_URI=https://dein-host/callback.php
-# SPOTIFY_PLAYLIST_ID=spotify:playlist:... ODER die reine ID
-# SPOTIFY_REFRESH_TOKEN= (wird nach Login automatisch gesetzt)
+# SPOTIFY_REDIRECT_URI=https://your-host/callback.php
+# SPOTIFY_PLAYLIST_ID=spotify:playlist:... OR just the ID
+# SPOTIFY_REFRESH_TOKEN= (set automatically after login)
 
-# Optional lokal starten (PHP Built-in Server)
+# Optional: run locally (PHP built-in server)
 php -S 127.0.0.1:8080 -t .
 ```
 
-### Spotify Login (einmalig)
+### Spotify Login (one-time)
 
-1. **Aufrufen:** `https://<dein-host>/login.php`  
-2. Bei Spotify einloggen & Zugriff erlauben  
-3. `callback.php` speichert den **Refresh Token** automatisch in `.env` → `SPOTIFY_REFRESH_TOKEN=...`  
+1. **Open:** `https://<your-host>/login.php`  
+2. Log in to Spotify and grant access  
+3. `callback.php` automatically saves the **Refresh Token** in `.env` → `SPOTIFY_REFRESH_TOKEN=...`  
 
 ---
 
 ## Endpoints
 
-> Alle Antworten sind `application/json` mit `{ ok: boolean, ... }`.  
-> Fehler liefern `{ ok:false, error: ... }` und passenden HTTP-Status.
+> All responses are `application/json` with `{ ok: boolean, ... }`.  
+> Errors return `{ ok:false, error: ... }` with an appropriate HTTP status.
 
-### 1) Track hinzufügen
+### 1) Add track
 
 **POST** `/add.php`  
 Body (JSON):
@@ -66,54 +66,54 @@ Body (JSON):
 { "url": "https://open.spotify.com/track/<ID>" }
 ```
 
-**Alternativ (GET):**
+**Alternatively (GET):**
 ```
 /add.php?url=https://open.spotify.com/track/<ID>
-/add.php?rawInput=irgendein Text mit https://open.spotify.com/track/<ID>
+/add.php?rawInput=text containing https://open.spotify.com/track/<ID>
 ```
 
-**Antwort (Beispiel):**
+**Example response:**
 ```json
 {
   "ok": true,
-  "message": "🎵 Hinzugefügt: Blu Cantrell, Sean Paul — Breathe (feat. Sean Paul) - Rap Version",
+  "message": "🎵 Added: Blu Cantrell, Sean Paul — Breathe (feat. Sean Paul) - Rap Version",
   "track_id": "<ID>",
   "title": "Breathe (feat. Sean Paul) - Rap Version",
   "artists": ["Blu Cantrell", "Sean Paul"]
 }
 ```
 
-Akzeptiert werden:
+Accepted formats:
 - `https://open.spotify.com/track/<ID>`
 - `spotify:track:<ID>`
 
-### 2) Playlist leeren
+### 2) Clear playlist
 
 **GET** `/clear.php`  
-Löscht alle Einträge aus der konfigurierten Playlist.
+Removes all tracks from the configured playlist.
 
-**Antwort:**
+**Response:**
 ```json
-{ "ok": true, "message": "Playlist geleert", "removed": 12 }
+{ "ok": true, "message": "Playlist cleared", "removed": 12 }
 ```
-Wenn bereits leer:
+If already empty:
 ```json
-{ "ok": true, "message": "Playlist war bereits leer" }
+{ "ok": true, "message": "Playlist was already empty" }
 ```
 
-### 3) Auto-Clear (gespielte Songs entfernen)
+### 3) Auto-clean (remove played songs)
 
 **GET** `/autoclear.php`  
 
-Logik:
-- Liest aktiven Player & aktuellen Track/Index
-- **Modus A:** Wenn ein aktiver Player deine Playlist spielt → löscht alle Positionen **vor** dem aktuellen Track  
-- **Modus B (Wrap-Ende):** Wenn pausiert und der letzte Track bis mind. `(duration - 20s)` gespielt wurde → löscht alte Einträge  
-- **Modus C:** Kein aktiver Player → nichts löschen
+**Logic:**
+- Reads active player and current track/index  
+- **Mode A:** If an active player is playing your playlist → deletes all positions **before** the current track  
+- **Mode B (wrap end):** If paused and the last track was played at least up to `(duration – 20s)` → deletes old entries  
+- **Mode C:** No active player → nothing happens  
 
-State-Datei: `autoclear_state.json` (wird automatisch gepflegt)
+State file: `autoclear_state.json` (managed automatically)
 
-**Antwort (Beispiel):**
+**Example response:**
 ```json
 {
   "ok": true,
@@ -124,37 +124,38 @@ State-Datei: `autoclear_state.json` (wird automatisch gepflegt)
 }
 ```
 
-### 4) OAuth-Flow
+### 4) OAuth Flow
 
-- **GET** `/login.php` → Weiterleitung zu Spotify
-- **GET** `/callback.php` → speichert `SPOTIFY_REFRESH_TOKEN` in `.env`, Ausgabe: `✅ Refresh Token gespeichert.`
+- **GET** `/login.php` → Redirects to Spotify  
+- **GET** `/callback.php` → saves `SPOTIFY_REFRESH_TOKEN` in `.env`, output: `✅ Refresh Token saved.`
 
 ---
 
-## Konfiguration (.env)
+## Configuration (.env)
 
 ```ini
 SPOTIFY_CLIENT_ID=CLIENT_ID
 SPOTIFY_CLIENT_SECRET=CLIENT_SECRET
-SPOTIFY_REDIRECT_URI=https://dein-host/callback.php
-SPOTIFY_PLAYLIST_ID=PLAYLIST_ID_ODER_URI
+SPOTIFY_REDIRECT_URI=https://your-host/callback.php
+SPOTIFY_PLAYLIST_ID=PLAYLIST_ID_OR_URI
 SPOTIFY_REFRESH_TOKEN=
 ```
 
-**Hinweis:** Achte darauf, dass dein Webserver **.env** nicht ausliefert (z. B. via Server-Konfiguration). Die PHP-Scripts brechen mit Fehlermeldung ab, wenn `.env` fehlt.
+**Note:** Make sure your web server **does not serve** the `.env` file (e.g., via server configuration).  
+The PHP scripts will exit with an error if `.env` is missing.
 
 ---
 
-## Streamer.bot-Integration (Node-Script)
+## Streamer.bot Integration (Node Script)
 
-Datei: `fetch.js`  
+File: `fetch.js`  
 
-Verhält sich als „Sub-Action“ und gibt genau **eine Zeile** für `%output1%` aus.  
-Liest **entweder** `DATA` (fertiges JSON) **oder** `RAW` (`%rawInput%`) **oder** `MSG` (`%message%`).
+Acts as a "sub-action" and outputs exactly **one line** to `%output1%`.  
+Reads either `DATA` (JSON), `RAW` (`%rawInput%`), or `MSG` (`%message%`).
 
-### Aufrufbeispiele
+### Examples
 
-**1) Mit fertigem JSON (DATA):**
+**1) With JSON (DATA):**
 ```bash
 # Windows (CMD)
 set URL=http://127.0.0.1:8080/add.php
@@ -162,65 +163,65 @@ set DATA={"url":"https://open.spotify.com/track/<ID>"}
 node fetch.js
 ```
 
-**2) Mit RAW (Channel Points):**
+**2) With RAW (Channel Points):**
 ```bash
 set URL=http://127.0.0.1:8080/add.php
-set RAW=https://open.spotify.com/track/<ID>   # oder Text mit Link
+set RAW=https://open.spotify.com/track/<ID>   # or text with link
 node fetch.js
 ```
 
-**3) Mit MSG (Bits):**
+**3) With MSG (Bits):**
 ```bash
 set URL=http://127.0.0.1:8080/add.php
 set MSG=!song https://open.spotify.com/track/<ID>
 node fetch.js
 ```
 
-**Ausgabe:**
-- Erfolg: `🎵 Hinzugefügt: <Artist> — <Title>`
-- Fehler: `❌ Fehler: <Grund>`
+**Output:**
+- Success: `🎵 Added: <Artist> — <Title>`
+- Error: `❌ Error: <Reason>`
 
-> Das Script setzt `NODE_TLS_REJECT_UNAUTHORIZED=0`, falls nicht gesetzt (nur für lokale Tests).
-
----
-
-## Sicherheit & Betrieb
-
-- **.env schützen:** Stelle sicher, dass `.env` nicht öffentlich abrufbar ist.  
-- **HTTPS** für OAuth-Redirect empfohlen/erforderlich (je nach Spotify-App-Einstellung).  
-- **Scopes sparsam:** Die App benötigt nur die angegebenen Scopes.  
-- **Logs/State:** `autoclear_state.json` enthält den letzten Player-State.
+> The script sets `NODE_TLS_REJECT_UNAUTHORIZED=0` if not already set (for local testing only).
 
 ---
 
-## Projektstruktur
+## Security & Operation
+
+- **Protect .env:** Make sure `.env` is not publicly accessible.  
+- **HTTPS** is recommended/required for OAuth redirect (depending on your Spotify app settings).  
+- **Minimal scopes:** Only use the required scopes listed above.  
+- **Logs/State:** `autoclear_state.json` stores the last player state.
+
+---
+
+## Project Structure
 
 ```
 Songrequest/
-├─ add.php                # Track zu Playlist hinzufügen
-├─ autoclear.php          # Gespielte Songs automatisch entfernen
-├─ autoclear_state.json   # State-Datei für Auto-Clear
-├─ bootstrap.php          # Helpers, .env, Spotify-API-Wrapper
-├─ callback.php           # OAuth Callback, speichert Refresh Token
-├─ clear.php              # Playlist vollständig leeren
-├─ fetch.js               # Node-Script für Streamer.bot (Sub-Action)
-├─ login.php              # OAuth Login-Einstieg
-├─ .env                   # lokale Konfiguration (nicht kommittieren)
-├─ .env.example           # Template für .env
-└─ songresult.txt         # Datei zur Speicherung der Songs
+├─ add.php                # Add track to playlist
+├─ autoclear.php          # Automatically remove played songs
+├─ autoclear_state.json   # State file for auto-clean
+├─ bootstrap.php          # Helpers, .env, Spotify API wrapper
+├─ callback.php           # OAuth callback, stores refresh token
+├─ clear.php              # Completely clear playlist
+├─ fetch.js               # Node script for Streamer.bot (sub-action)
+├─ login.php              # OAuth login entry point
+├─ .env                   # Local configuration (do not commit)
+├─ .env.example           # Example template for .env
+└─ songresult.txt         # Stores song results
 ```
 
 ---
 
-## Entwicklung
+## Development
 
-- PHP Built-in Server:
+- Local PHP server:
   ```bash
   php -S 127.0.0.1:8080 -t .
   ```
-- Testaufrufe:
+- Test endpoints:
   - `GET http://127.0.0.1:8080/login.php`
-  - `POST http://127.0.0.1:8080/add.php` mit `{ "url": "..." }`
+  - `POST http://127.0.0.1:8080/add.php` with `{ "url": "..." }`
   - `GET http://127.0.0.1:8080/clear.php`
   - `GET http://127.0.0.1:8080/autoclear.php`
 
@@ -228,10 +229,12 @@ Songrequest/
 
 ## License
 
-Wähle eine passende Lizenz (z. B. MIT) und ersetze diesen Abschnitt entsprechend.
+Choose an appropriate license (e.g. MIT) and update this section accordingly.
 
 ---
 
 ## Disclaimer
 
-Dieses Projekt nutzt die Spotify Web API. Alle Marken- und Namensrechte liegen bei ihren jeweiligen Inhabern. Bitte beachte die [Spotify Developer Terms](https://developer.spotify.com/terms/).
+This project uses the Spotify Web API.  
+All trademarks and names belong to their respective owners.  
+Please read the [Spotify Developer Terms](https://developer.spotify.com/terms/).
