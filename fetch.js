@@ -36,12 +36,25 @@ function buildTrackUrlFromText(text) {
     // 1) Body bestimmen
     let bodyStr = dataEnv;
     if (!bodyStr) {
-      // Priorität: RAW (Channel Points) > MSG (Bits)
-      const source = rawEnv || msgEnv || "";
-      const trackUrl = buildTrackUrlFromText(source);
-      if (!trackUrl) { console.log("❌ Fehler: Kein gültiger Spotify-Track"); return; }
-      bodyStr = JSON.stringify({ url: trackUrl });
+  let source = rawEnv || msgEnv || "";
+  // Streamer.bot Platzhalter ignorieren
+if (source.startsWith("%") && source.endsWith("%")) {
+  source = "";
+}
+  if (source.trim() !== "") {
+    const trackUrl = buildTrackUrlFromText(source);
+    if (!trackUrl) {
+      console.log("❌ Fehler: Kein gültiger Spotify-Track");
+      fs.writeFileSync("songresult.txt", "❌ Fehler: Kein gültiger Spotify-Track\n");
+      return;
     }
+    bodyStr = JSON.stringify({ url: trackUrl });
+  } else {
+    // 👈 KEIN Link → leerer Body → fav.php nimmt aktuellen Song
+    bodyStr = "";
+  }
+}
+
 
     // 2) POST an add.php
     const res  = await fetch(urlTarget, {
