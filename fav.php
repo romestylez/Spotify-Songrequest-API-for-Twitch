@@ -58,6 +58,36 @@ $title   = $track['name'] ?? '';
 $artists = array_map(fn($a) => $a['name'] ?? '', $track['artists'] ?? []);
 $artistStr = implode(', ', array_filter($artists));
 
+/* ---------- Prüfen: Track schon in Favoriten? ---------- */
+$exists = false;
+$offset = 0;
+
+do {
+    $pl = spotify_api(
+        'GET',
+        "https://api.spotify.com/v1/playlists/{$favPlaylistId}/tracks?fields=items(track(id)),next&limit=100&offset={$offset}",
+        $token
+    );
+
+    foreach ($pl['items'] ?? [] as $it) {
+        if (($it['track']['id'] ?? null) === $trackId) {
+            $exists = true;
+            break 2;
+        }
+    }
+
+    $offset += 100;
+} while (!empty($pl['next']));
+
+if ($exists) {
+    json_ok([
+        'message'   => "⭐ Bereits in Favoriten: {$artistStr} — {$title}",
+        'track_id' => $trackId,
+        'duplicate'=> true
+    ]);
+}
+
+
 /* ---------- Zur Favoriten-Playlist hinzufügen ---------- */
 $res = spotify_api(
     'POST',
