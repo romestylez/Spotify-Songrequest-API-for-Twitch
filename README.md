@@ -5,7 +5,8 @@ A small PHP API for adding Spotify tracks to a playlist – including OAuth logi
 ## Features
 
 - 🎧 **Add track** via Spotify URL or `spotify:track:` URI  
-- ⭐ **Favorite current track or link**: Save the currently playing song *or* a provided Spotify track to a separate favorites playlist (duplicates prevented)  
+- ⭐ **Favorite current track or link**: Save the currently playing song *or* a provided Spotify track to a separate favorites playlist (duplicates prevented)
+- 🎵 **Now Playing (read-only)**: Query the currently playing Spotify track without modifying any playlist (ideal for OBS overlays) 
 - 🔐 **OAuth login** (stores login & refresh token automatically — now supports MAIN & AUTOCLEAR)  
 - 🧹 **Auto-clean**: Removes already played songs from the playlist (with a 20-second buffer and state tracking)  
 - 🗑️ **Clear playlist** via endpoint  
@@ -20,10 +21,10 @@ A small PHP API for adding Spotify tracks to a playlist – including OAuth logi
 
 - PHP ≥ 8.1 with cURL  
 - Web server (local or public)  
-- Node.js (only for `fetch.js`)  
+- Node.js (only for `fetch.js` / `fetch_nowplaying.js`)  
 - Spotify Developer Account + **two apps**  
-  - MAIN → Für Songrequests  
-  - AUTOCLEAR → Für automatisches Löschen  
+  - MAIN → For song requests  
+  - AUTOCLEAR → For automatic cleanup  
   - Add Redirect URI in both apps (must match `.env`)  
   - Required scopes:  
     `playlist-modify-private`, `playlist-modify-public`, `user-read-playback-state`
@@ -57,6 +58,31 @@ POST `/fav.php`
 - With Spotify link → saves provided track  
 - Duplicates are prevented
 
+### 2) Current track (Now Playing)
+
+POST `/song.php`
+
+- No input required  
+- Returns the currently playing Spotify track  
+- Read-only (no playlist or favorites modification)
+
+**Example response:**
+```json
+{
+  "ok": true,
+  "message": "🎵 Aktueller Song: Artist — Title",
+  "track_id": "xxxxxxxxxxxxxxxxxxxxxx"
+}
+```
+
+If nothing is playing:
+```json
+{
+  "ok": false,
+  "error": "Kein aktiver Spotify-Track"
+}
+```
+
 ---
 
 ## Configuration (.env)
@@ -77,7 +103,9 @@ SPOTIFY_FAV_PLAYLIST_ID=FAVORITES_PLAYLIST_ID
 
 ---
 
-## Streamer.bot Example
+## Streamer.bot Examples
+
+### Favorite current track or link
 
 Command:
 ```
@@ -93,20 +121,21 @@ MSG=%message%
 NODE_TLS_REJECT_UNAUTHORIZED=0
 ```
 
+### Now Playing (read-only)
+
+Command:
+```
+!song
+```
+
+Environment:
+```
+URL=https://your-host/song.php
+NODE_TLS_REJECT_UNAUTHORIZED=0
+```
+
+> Note:
+> - `RAW` and `MSG` must not be set  
+> - Intended for read-only usage (e.g. OBS Now Playing overlay)
+
 ---
-
-## Project Structure
-
-Songrequest/
-├─ add.php
-├─ fav.php
-├─ autoclear.php
-├─ autoclear_state.json
-├─ bootstrap.php
-├─ callback.php
-├─ clear.php
-├─ fetch.js
-├─ login.php
-├─ .env
-├─ .env.example
-└─ songresult.txt
