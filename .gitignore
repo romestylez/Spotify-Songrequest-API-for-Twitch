@@ -1,3 +1,4 @@
 .env
 autoclear_state.json
 songresult.txt
+nowplaying.txt
