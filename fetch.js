@@ -19,15 +19,34 @@ if (dataEnv) { // falls jemand "DATA = {...}" reinkopiert hat → auf {...} kür
 }
 
 function buildTrackUrlFromText(text) {
-  if (!text) return null;
+  if (!text) return { error: "empty" };
+
   let t = text.trim();
   try { t = decodeURIComponent(t); } catch {}
-  const qPos = t.indexOf("?"); if (qPos >= 0) t = t.slice(0, qPos);
-  t = t.replace(/\/intl-[^/]+\/(track\/)/i, "/$1"); // intl-xx entfernen
-  const m = t.match(/(?:https?:\/\/)?open\.spotify\.com\/track\/([A-Za-z0-9]{22})|spotify:track:([A-Za-z0-9]{22})/i);
+
+  const qPos = t.indexOf("?");
+  if (qPos >= 0) t = t.slice(0, qPos);
+
+  // ❗ Album-Link explizit erkennen
+  if (/open\.spotify\.com\/(intl-[^/]+\/)?album\//i.test(t)) {
+    return { error: "album" };
+  }
+
+  // Track-Link normalisieren
+  t = t.replace(/\/intl-[^/]+\/(track\/)/i, "/$1");
+
+  const m = t.match(
+    /(?:https?:\/\/)?open\.spotify\.com\/track\/([A-Za-z0-9]{22})|spotify:track:([A-Za-z0-9]{22})/i
+  );
+
   const id = m ? (m[1] || m[2] || "").trim() : "";
-  return id ? "https://open.spotify.com/track/" + id : null;
+  if (!id) return { error: "invalid" };
+
+  return { url: "https://open.spotify.com/track/" + id };
 }
+
+
+
 
 (async () => {
   try {
@@ -42,13 +61,22 @@ if (source.startsWith("%") && source.endsWith("%")) {
   source = "";
 }
   if (source.trim() !== "") {
-    const trackUrl = buildTrackUrlFromText(source);
-    if (!trackUrl) {
-      console.log("❌ Fehler: Kein gültiger Spotify-Track");
-      fs.writeFileSync("songresult.txt", "❌ Fehler: Kein gültiger Spotify-Track\n");
-      return;
-    }
-    bodyStr = JSON.stringify({ url: trackUrl });
+    const result = buildTrackUrlFromText(source);
+
+if (result.error) {
+  let msg = "❌ Kein gültiger Spotify-Track-Link";
+
+  if (result.error === "album") {
+    msg = "❌ Das ist ein Album-Link – bitte poste einen einzelnen Spotify-Track";
+  }
+
+  console.log(msg);
+  fs.writeFileSync("songresult.txt", msg + "\n");
+  return;
+}
+
+bodyStr = JSON.stringify({ url: result.url });
+
   } else {
     // 👈 KEIN Link → leerer Body → fav.php nimmt aktuellen Song
     bodyStr = "";
